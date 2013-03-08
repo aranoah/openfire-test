@@ -21,6 +21,7 @@ bin-groovy/
 *.classpath
 *.project
 *.war
+*/him-auth/libs
 Thumbs.db
 .idea
 .project
