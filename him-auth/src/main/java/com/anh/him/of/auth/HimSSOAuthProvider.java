@@ -53,7 +53,7 @@ public class HimSSOAuthProvider implements AuthProvider {
 			throw new UnauthorizedException(
 					"Invalid session, please relogin to auth server");
 		String[] tokens = password.split(":");
-		if (tokens.length != 3) {
+		if (tokens.length != 2) {
 			throw new UnauthorizedException(
 					"Invalid session, please relogin to auth server");
 		}
@@ -61,12 +61,12 @@ public class HimSSOAuthProvider implements AuthProvider {
 		authSecurityKey = JiveProperties.getInstance().getProperty(
 				"him.auth-secret-key", "default-him-key");
 		String sessionPasswd = StringUtils.hash(username + ":" + tokens[0]
-				+ ":" + tokens[1] + ":" + authSecurityKey, "MD5");
-		if (!sessionPasswd.equals(tokens[2])) {
+				+ ":" + authSecurityKey, "MD5");
+		if (!sessionPasswd.equals(tokens[1])) {
 			throw new UnauthorizedException(
 					"Invalid session, please relogin to auth server");
 		}
-		createUser(username, tokens[1]);
+		createUser(username, tokens[0]);
 
 	}
 
@@ -101,22 +101,25 @@ public class HimSSOAuthProvider implements AuthProvider {
 		User user = null;
 		try {
 			user = userManager.getUser(username);
-			user.getProperties().put("JSESSIONID", sid);
+			if (sid != null)
+				user.getProperties().put("JSESSIONID", sid);
 		} catch (UserNotFoundException unfe) {
 			try {
 				log.debug("JDBCAuthProvider: Automatically creating new user account for "
 						+ username);
 				user = UserManager.getUserProvider().createUser(username,
 						StringUtils.randomString(8), null, null);
-				user.getProperties().put("JSESSIONID", sid);
+				if (sid != null)
+					user.getProperties().put("JSESSIONID", sid);
 			} catch (UserAlreadyExistsException uaee) {
 				try {
 					user = userManager.getUser(username);
-					user.getProperties().put("JSESSIONID", sid);
+					if (sid != null)
+						user.getProperties().put("JSESSIONID", sid);
 				} catch (UserNotFoundException e) {
 					log.debug("JDBCAuthProvider: User not found exception to cache "
 							+ username);
-				
+
 				}
 
 			}
