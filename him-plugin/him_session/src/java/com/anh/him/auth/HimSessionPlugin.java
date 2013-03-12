@@ -1,6 +1,7 @@
 package com.anh.him.auth;
 
 import java.io.File;
+import java.util.TimerTask;
 
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpException;
@@ -10,6 +11,7 @@ import org.apache.commons.httpclient.NameValuePair;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.jivesoftware.openfire.XMPPServer;
+import org.jivesoftware.openfire.XMPPServerInfo;
 import org.jivesoftware.openfire.container.Plugin;
 import org.jivesoftware.openfire.container.PluginManager;
 import org.jivesoftware.openfire.event.SessionEventDispatcher;
@@ -28,6 +30,8 @@ import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import org.xmpp.packet.JID;
 
+import com.anh.him.auth.TaskManager;
+
 public class HimSessionPlugin implements Plugin {
 	private static final String SVC_XMPP_SESSION = "/svc/xmpp/session";
 	private static final String JSESSIONID = "JSESSIONID";
@@ -42,36 +46,50 @@ public class HimSessionPlugin implements Plugin {
 	private boolean loginInitialized = false;
 	private String himCentralServer = null;
 	private String sessionId;
-	public static  String PLUGIN_NAME="him-auth";
-   
+	public static String PLUGIN_NAME = "him_auth";
+	private TaskManager taskManager;
+	private XMPPServerInfo serverInfo;
+
 	@Override
 	public void initializePlugin(PluginManager manager, File pluginDirectory) {
 		// TODO Auto-generated method stub
 		// XMPPServer.getInstance().
+		taskManager = TaskManager.getInstance();
 		serverId = JiveProperties.getInstance().getProperty(
-				"him.auth-server-id", "openhim");
+				"him.auth-server-id", "aniyus");
 		password = JiveProperties.getInstance().getProperty(
-				"him.auth-server-password", "#$#$#$#$");
+				"him.auth-server-password", "welcome");
 		himCentralServer = JiveProperties.getInstance().getProperty(
 				"him.central-host", "http://localhost:8080");
 		SessionEventDispatcher.addListener(sessionListener);
 		PLUGIN_NAME = pluginDirectory.getName();
+		serverInfo = XMPPServer.getInstance().getServerInfo();
+		logger.debug(logMaker, "initialization completes");
+		restart();
 
 	}
-	
-	public static void restart(){
-		HimSessionPlugin plugin=(HimSessionPlugin)XMPPServer.getInstance().getPluginManager().getPlugin(PLUGIN_NAME);
+
+	public static void restart() {
+		logger.debug(logMaker, "restart completes");
+
+		HimSessionPlugin plugin = (HimSessionPlugin) XMPPServer.getInstance()
+				.getPluginManager().getPlugin(PLUGIN_NAME);
 		plugin.register();
 	}
-	public static void stop(){
-		HimSessionPlugin plugin=(HimSessionPlugin)XMPPServer.getInstance().getPluginManager().getPlugin(PLUGIN_NAME);
+
+	public static void stop() {
+		logger.debug(logMaker, "stop completes");
+		HimSessionPlugin plugin = (HimSessionPlugin) XMPPServer.getInstance()
+				.getPluginManager().getPlugin(PLUGIN_NAME);
 		plugin.deRegister();
 	}
 
 	@Override
 	public void destroyPlugin() {
+		logger.debug(logMaker, "stop completes");
 		// TODO Auto-generated method stub
 		sessionId = null;
+		SessionEventDispatcher.removeListener(sessionListener);
 
 	}
 
@@ -112,15 +130,22 @@ public class HimSessionPlugin implements Plugin {
 			return;
 		}
 
-		GetMethod get = new GetMethod(himCentralServer + SVC_SRV_LOGOUT);
+		taskManager.submit(new Runnable() {
 
-		long currentTimeMillis = System.currentTimeMillis();
-		get.addRequestHeader("user-token", "" + currentTimeMillis);
-		get.addRequestHeader("pass-token", getPassKeyToken(currentTimeMillis));
-		get.addRequestHeader(JSESSIONID, sessionId);
-		loginInitialized = false;
-		fetchHttpResonse(get);
-		
+			@Override
+			public void run() {
+				GetMethod get = new GetMethod(himCentralServer + SVC_SRV_LOGOUT);
+				long currentTimeMillis = System.currentTimeMillis();
+				get.addRequestHeader("user-token", "" + currentTimeMillis);
+				get.addRequestHeader("pass-token",
+						getPassKeyToken(currentTimeMillis));
+				get.addRequestHeader(JSESSIONID, sessionId);
+				loginInitialized = false;
+				fetchHttpResonse(get);
+
+			}
+		});
+
 	}
 
 	private void register() {
@@ -131,25 +156,39 @@ public class HimSessionPlugin implements Plugin {
 			return;
 		}
 
-		PostMethod post = new PostMethod(himCentralServer + SVC_LOGIN);
-		post.addParameters(new NameValuePair[] {
-				new NameValuePair("userId", serverId),
-				new NameValuePair("password", password),
-				new NameValuePair("rememberMe", "true") });
+		taskManager.submit(new Runnable() {
 
-		JSONObject result = fetchHttpResonse(post);
-		if (result != null) {
-			try {
-				sessionId = result.getString("sid");
-				loginInitialized = true;
-			} catch (JSONException e) {
-				loginInitialized = false;
-				logger.error(logMaker, "no sessionid found for server");
+			@Override
+			public void run() {
+
+				PostMethod post = new PostMethod(himCentralServer + SVC_LOGIN);
+				post.addRequestHeader("Content-Type",
+						"application/x-www-form-urlencoded");
+				post.addParameters(new NameValuePair[] {
+						new NameValuePair("userId", serverId),
+						new NameValuePair("password", password),
+						new NameValuePair("rememberMe", "true"),
+						new NameValuePair("deviceId", serverInfo.getHostname()), new NameValuePair("deviceOs", "xmpp-serv") }
+
+				);
+
+				JSONObject result = fetchHttpResonse(post);
+				if (result != null) {
+					try {
+						sessionId = result.getString("sid");
+						loginInitialized = true;
+					} catch (JSONException e) {
+						loginInitialized = false;
+						logger.error(logMaker, "no sessionid found for server");
+					}
+
+				} else {
+					loginInitialized = false;
+				}
+
 			}
+		});
 
-		} else {
-			loginInitialized = false;
-		}
 	}
 
 	private void markPresence(Session session, String presenceType) {
@@ -177,14 +216,13 @@ public class HimSessionPlugin implements Plugin {
 		}
 		String fullJid = address.toFullJID();
 
-		String serverNode = JiveProperties.getInstance().getProperty(
-				"him.server-node", "localhost");
 		HttpClient client = new HttpClient();
 
 		PostMethod post = null;
 
-		post = new PostMethod(serverId + SVC_XMPP_SESSION);
-
+		post = new PostMethod(himCentralServer + SVC_XMPP_SESSION);
+		post.addRequestHeader("Content-Type",
+				"application/x-www-form-urlencoded");
 		long currentTimeMillis = System.currentTimeMillis();
 		String passToken = getPassKeyToken(currentTimeMillis);
 		post.addRequestHeader("user-token", "" + currentTimeMillis);
@@ -192,7 +230,7 @@ public class HimSessionPlugin implements Plugin {
 		post.addRequestHeader(JSESSIONID, sessionId);
 		post.addParameters(new NameValuePair[] {
 				new NameValuePair("jidFull", session.getAddress().toFullJID()),
-				new NameValuePair("userId", session.getAddress().toBareJID()),
+				new NameValuePair("userId", session.getAddress().toBareJID().split("@")[0]),
 				new NameValuePair("presenceType", presenceType),
 				new NameValuePair("jsessionId", clientSid) });
 		fetchHttpResonse(post);
@@ -209,32 +247,46 @@ public class HimSessionPlugin implements Plugin {
 	private SessionEventListener sessionListener = new SessionEventListener() {
 
 		@Override
-		public void sessionCreated(Session session) {
-			markPresence(session, "session-active");
+		public void sessionCreated(final Session session) {
+			taskManager.submit(new Runnable() {
+
+				@Override
+				public void run() {
+					logger.debug(logMaker, "session-active");
+					markPresence(session, "session-active");
+
+				}
+
+			});
 
 		}
 
 		@Override
-		public void sessionDestroyed(Session session) {
+		public void sessionDestroyed(final Session session) {
+			taskManager.submit(new Runnable() {
+				@Override
+				public void run() {
+					markPresence(session, "session-destroyed");
+
+				}
+
+			});
+		}
+
+		@Override
+		public void anonymousSessionCreated(final Session session) {
 			// TODO Auto-generated method stub
-			markPresence(session, "session-destroyed");
 
 		}
 
 		@Override
-		public void anonymousSessionCreated(Session session) {
+		public void anonymousSessionDestroyed(final Session session) {
 			// TODO Auto-generated method stub
 
 		}
 
 		@Override
-		public void anonymousSessionDestroyed(Session session) {
-			// TODO Auto-generated method stub
-
-		}
-
-		@Override
-		public void resourceBound(Session session) {
+		public void resourceBound(final Session session) {
 			// TODO Auto-generated method stub
 
 		}
