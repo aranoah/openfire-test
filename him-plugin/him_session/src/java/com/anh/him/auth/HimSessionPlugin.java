@@ -1,6 +1,7 @@
 package com.anh.him.auth;
 
 import java.io.File;
+import java.util.Map;
 import java.util.TimerTask;
 
 import org.apache.commons.httpclient.HttpClient;
@@ -21,6 +22,7 @@ import org.jivesoftware.openfire.user.User;
 import org.jivesoftware.openfire.user.UserManager;
 import org.jivesoftware.openfire.user.UserNotFoundException;
 import org.jivesoftware.util.JiveProperties;
+import org.jivesoftware.util.PropertyEventListener;
 import org.jivesoftware.util.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,9 +32,7 @@ import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import org.xmpp.packet.JID;
 
-import com.anh.him.auth.TaskManager;
-
-public class HimSessionPlugin implements Plugin {
+public class HimSessionPlugin implements Plugin ,PropertyEventListener{
 	private static final String SVC_XMPP_SESSION = "/svc/xmpp/session";
 	private static final String JSESSIONID = "JSESSIONID";
 	private static final String SVC_LOGIN = "/svc/login";
@@ -49,6 +49,8 @@ public class HimSessionPlugin implements Plugin {
 	public static String PLUGIN_NAME = "him_auth";
 	private TaskManager taskManager;
 	private XMPPServerInfo serverInfo;
+	private boolean enabled;
+	private String passKey;
 
 	@Override
 	public void initializePlugin(PluginManager manager, File pluginDirectory) {
@@ -194,9 +196,9 @@ public class HimSessionPlugin implements Plugin {
 	private void markPresence(Session session, String presenceType) {
 		// TODO Auto-generated method stub
 		if (!loginInitialized) {
-			String enabled = JiveProperties.getInstance().getProperty(
-					"him.session-plugin-enabled", "false");
-			if (enabled.equals("false")) {
+			enabled = Boolean.getBoolean(JiveProperties.getInstance().getProperty(
+					"him.session-plugin-enabled", "false"));
+			if (enabled) {
 				return;
 			}
 			register();
@@ -292,4 +294,72 @@ public class HimSessionPlugin implements Plugin {
 		}
 
 	};
+	
+    boolean taskAlreadyAdded = false;
+    int taskAction = 1;  ///0-stop,1-start
+	@Override
+	public void propertySet(String property, Map<String, Object> params) {
+		if(property.equals("him.auth-server-id")){
+			serverId = (String) params.get("him.auth-server-id");
+			taskAction =1;
+			submitPropertyActionTask();
+		}
+		else if(property.equals("him.auth-server-password")){
+			password =(String)  params.get("him.auth-server-password");
+			taskAction =1;
+			submitPropertyActionTask();
+		}else if (property.equals("him.central-host")){
+			himCentralServer = (String) params.get("him.central-host");
+			taskAction =1;
+			submitPropertyActionTask();
+		}else if(property.equals("him.session-plugin-enabled")){
+			enabled = Boolean.getBoolean( (String) params.get("him.session-plugin-enabled"));
+			taskAction =(enabled?1:0);
+			submitPropertyActionTask();
+		}else if(property.equals("him.auth-secret-key")){
+			passKey = (String) params.get("him.auth-secret-key");
+			taskAction =1;
+			submitPropertyActionTask();
+		}
+		
+	}
+
+	private void submitPropertyActionTask() {
+		if (!taskAlreadyAdded) {
+			taskAlreadyAdded = true;
+			TaskManager.getInstance().schedule(new TimerTask() {
+				@Override
+				public void run() {
+				 taskAlreadyAdded = false;
+				 propertyUpdateOperation();
+				}
+
+			}, 5000);
+		}
+		
+	}
+    public void propertyUpdateOperation(){
+    	if( taskAlreadyAdded){
+    		restart();
+    	}else{
+    		stop();
+    	}
+    }
+	@Override
+	public void propertyDeleted(String property, Map<String, Object> params) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void xmlPropertySet(String property, Map<String, Object> params) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void xmlPropertyDeleted(String property, Map<String, Object> params) {
+		// TODO Auto-generated method stub
+		
+	}
 }

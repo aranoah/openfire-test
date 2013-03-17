@@ -13,22 +13,25 @@
 
 <html>
     <head>
-        <title><fmt:message key="advance.user.search.title" /></title>
-        <meta name="pageID" content="advance-user-search"/>
+        <title>HiM Session Management</title>
+        <meta name="pageID" content="him-session-management"/>
     </head>
     <body>
 
 <%
   String action = request.getParameter("action");
+  String opDone= action+" Operation complete";
   if(action==null){
+	  opDone="";
   }else if(action.equals("restart")){
     HimSessionPlugin.restart();
   }else if(action.equals("stop")){
 	  HimSessionPlugin.stop();
   }
+  
   %>
-
-
+   <h3><%=opDone %></h3>
+  
    
     <div class="jive-contentBoxHeader"><fmt:message key="advance.user.search.search_user" /></div>
     <div class="jive-contentBox">

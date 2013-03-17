@@ -10,7 +10,7 @@
     <minServerVersion>3.0.0</minServerVersion>
    <adminconsole>
         <tab id="tab-server">
-            <sidebar id="sidebar-him-settings">
+            <sidebar id="sidebar-server-manager">
                 <item id="search-him-setting-auth" name="HiM Session Manager"
                     url="auth-session.jsp"
                     description="HiM Session Manager" />
