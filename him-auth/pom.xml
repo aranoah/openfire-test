@@ -11,5 +11,12 @@
   		<scope>system</scope>
   		<systemPath>${basedir}/libs/openfire.jar</systemPath>
   	</dependency>
+<dependency>
+                <groupId>com</groupId>
+                <artifactId>json-lib</artifactId>
+                <version>1.0</version>
+                <scope>system</scope>
+                <systemPath>${basedir}/libs/json.jar</systemPath>
+        </dependency>
   </dependencies>
 </project>
