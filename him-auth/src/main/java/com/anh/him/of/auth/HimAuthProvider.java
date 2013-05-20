@@ -1,4 +1,3 @@
-
 package com.anh.him.of.auth;
 
 import java.sql.Connection;
@@ -48,7 +47,7 @@ public class HimAuthProvider implements AuthProvider {
 	private static final String LOAD_PASSWORD = "SELECT plainPassword,encryptedPassword FROM ofUser WHERE username=?";
 	private static final String UPDATE_PASSWORD = "UPDATE ofUser SET plainPassword=?, encryptedPassword=? WHERE username=?";
 
-	protected static String SVC_SRV_SESSION_VALIDATE = "/svc/user/validate-session";
+	protected static String SVC_SRV_SESSION_VALIDATE = "/svc/validate-session";
 	private static Logger logger = LoggerFactory
 			.getLogger(HimAuthProvider.class);
 	private static Marker logMaker = MarkerFactory.getMarker("HereIam");
@@ -87,7 +86,7 @@ public class HimAuthProvider implements AuthProvider {
 					logger.error(logMaker, obj.getString("message"));
 					return null;
 				}
-				return obj.getJSONObject("result");
+				return obj;
 			} else {
 				logger.error(logMaker, method.getStatusText());
 			}
