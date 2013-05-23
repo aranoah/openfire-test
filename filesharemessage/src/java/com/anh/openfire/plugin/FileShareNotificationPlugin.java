@@ -12,6 +12,7 @@ import org.jivesoftware.openfire.event.SessionEventDispatcher;
 import org.jivesoftware.util.TaskEngine;
 import org.xmpp.packet.JID;
 import org.xmpp.packet.Message;
+import org.xmpp.packet.Message.Type;
 
 
 public class FileShareNotificationPlugin implements Plugin {
@@ -33,12 +34,13 @@ public class FileShareNotificationPlugin implements Plugin {
 		      router = null;
 		   }
 	   
-	   public void sendMessage(){
+	   public void sendMessage(String messageFrom,String messgeTo,String fileUrl){
 		   final Message message = new Message();
-		   message.setTo("naman@aniyuss-macbook-pro.local");
-		   message.setFrom(serverAddress);
-		   message.setSubject("Test Message");
-           message.setBody("THis is my body");
+		   message.setTo(messgeTo);
+		   message.setFrom(messageFrom);
+		   message.setSubject("notification");
+           message.setBody(fileUrl);
+           message.setType(Type.chat);
            TimerTask messageTask = new TimerTask() {
                @Override
 			public void run() {
