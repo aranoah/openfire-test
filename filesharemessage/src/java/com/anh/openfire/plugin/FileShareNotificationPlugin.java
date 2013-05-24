@@ -38,7 +38,7 @@ public class FileShareNotificationPlugin implements Plugin {
 		   final Message message = new Message();
 		   message.setTo(messgeTo);
 		   message.setFrom(messageFrom);
-		   message.setSubject("notification");
+		   message.setSubject("him-attachment");
            message.setBody(fileUrl);
            message.setType(Type.chat);
            TimerTask messageTask = new TimerTask() {
