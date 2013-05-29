@@ -4,7 +4,7 @@ him-openfire
 openfire plugin development
 
 
-configuration property
+configuration property<br>
   xmpp.httpbind.client.requests.ignoreOveractivity = true <br>
   provider.auth.className = com.anh.him.of.auth.HimAuthProvider<br>
   xmpp.domain = hereiamconnect.com <br>
