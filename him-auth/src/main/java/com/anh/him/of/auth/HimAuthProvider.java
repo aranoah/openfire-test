@@ -48,6 +48,7 @@ public class HimAuthProvider implements AuthProvider {
 	private static final String UPDATE_PASSWORD = "UPDATE ofUser SET plainPassword=?, encryptedPassword=? WHERE username=?";
 
 	protected static String SVC_SRV_SESSION_VALIDATE = "/svc/validate-session";
+	protected static String SVC_SRV_LOGIN = "/svc/xmpp/check-user-credential";
 	private static Logger logger = LoggerFactory
 			.getLogger(HimAuthProvider.class);
 	private static Marker logMaker = MarkerFactory.getMarker("HereIam");
